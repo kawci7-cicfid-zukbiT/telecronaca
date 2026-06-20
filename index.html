@@ -107,8 +107,7 @@
   </div>
 
   <div class="api-section">
-    <div class="section-label">Connessione AI (Qwen VL)</div>
-    <div class="provider-btns" id="provider-btns"></div>
+    <div class="section-label">Connessione AI (DashScope)</div>
     <div id="api-fields"></div>
   </div>
 
@@ -155,37 +154,6 @@ const COLORS = [
   {name:"Azzurro",hex:"#06B6D4"},{name:"Grigio",hex:"#6B7280"},
 ];
 
-const PROVIDERS = [
-  {
-    id: "dashscope",
-    name: "DashScope",
-    endpoint: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
-    model: "qwen-vl-max",
-    hint: "Registrati su dashscope.aliyun.com → API Key gratuita con crediti. Modello: qwen-vl-max"
-  },
-  {
-    id: "openrouter",
-    name: "OpenRouter",
-    endpoint: "https://openrouter.ai/api/v1/chat/completions",
-    model: "qwen/qwen-2.5-vl-72b-instruct",
-    hint: "Registrati su openrouter.ai → API Key. Supporta CORS dal browser. Alcuni modelli gratuiti."
-  },
-  {
-    id: "ollama",
-    name: "Ollama (locale)",
-    endpoint: "http://localhost:11434/v1/chat/completions",
-    model: "qwen2.5-vl:7b",
-    hint: "Installa Ollama, poi: ollama pull qwen2.5-vl:7b — Nessuna API key necessaria, gira sul tuo PC."
-  },
-  {
-    id: "custom",
-    name: "Custom",
-    endpoint: "",
-    model: "",
-    hint: "Qualsiasi API compatibile OpenAI con supporto vision."
-  }
-];
-
 const STYLES = [
   { id: "energetic", name: "🔥 Energico", desc: "Telecronista entusiasta e passionale" },
   { id: "technical", name: "🎯 Tecnico", desc: "Analisi tattica e tecnica" },
@@ -195,10 +163,9 @@ const STYLES = [
 
 let state = {
   players: [{name:"",shirt:""},{name:"",shirt:""},{name:"",shirt:""},{name:"",shirt:""}],
-  provider: "dashscope",
   apiKey: "",
-  endpoint: PROVIDERS[0].endpoint,
-  model: PROVIDERS[0].model,
+  endpoint: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+  model: "qwen-vl-max",
   frequency: 6,
   style: "energetic",
 };
@@ -244,19 +211,6 @@ function renderPlayers() {
   });
 }
 
-function renderProviders() {
-  const btns = document.getElementById("provider-btns");
-  btns.innerHTML = "";
-  PROVIDERS.forEach(prov => {
-    const btn = document.createElement("button");
-    btn.className = `provider-btn${state.provider === prov.id ? " active" : ""}`;
-    btn.textContent = prov.name;
-    btn.onclick = () => { selectProvider(prov.id); };
-    btns.appendChild(btn);
-  });
-  renderApiFields();
-}
-
 function renderStyles() {
   const btns = document.getElementById("style-btns");
   btns.innerHTML = "";
@@ -271,26 +225,13 @@ function renderStyles() {
 }
 
 function renderApiFields() {
-  const prov = PROVIDERS.find(p => p.id === state.provider);
   const fields = document.getElementById("api-fields");
-  const needsKey = prov.id !== "ollama";
-
   fields.innerHTML = `
-    ${needsKey ? `<input type="text" placeholder="API Key" value="${state.apiKey}" oninput="state.apiKey=this.value;checkReady()">` : ""}
+    <input type="text" placeholder="API Key DashScope" value="${state.apiKey}" oninput="state.apiKey=this.value;checkReady()">
     <input type="text" placeholder="Endpoint URL" value="${state.endpoint}" oninput="state.endpoint=this.value;checkReady()">
     <input type="text" placeholder="Modello" value="${state.model}" oninput="state.model=this.value;checkReady()">
-    <div class="api-hint">${prov.hint}</div>
+    <div class="api-hint">Registrati su dashscope.aliyun.com → Crea API Key. Modello consigliato: qwen-vl-max</div>
   `;
-}
-
-function selectProvider(id) {
-  state.provider = id;
-  const prov = PROVIDERS.find(p => p.id === id);
-  state.endpoint = prov.endpoint;
-  state.model = prov.model;
-  if (id === "ollama") state.apiKey = "";
-  renderProviders();
-  checkReady();
 }
 
 function selectStyle(id) {
@@ -315,7 +256,7 @@ function updatePlayer(idx, field, val) {
 
 function checkReady() {
   const playersOk = state.players.every(p => p.name && p.shirt);
-  const apiOk = state.endpoint && state.model && (state.provider === "ollama" || state.apiKey);
+  const apiOk = state.endpoint && state.model && state.apiKey;
   const btn = document.getElementById("start-btn");
   const hint = document.getElementById("start-hint");
   if (playersOk && apiOk) {
@@ -328,7 +269,7 @@ function checkReady() {
     btn.disabled = true;
     hint.style.color = "#666";
     if (!playersOk) hint.textContent = "Compila nome e maglia per tutti i giocatori";
-    else hint.textContent = "Configura la connessione API";
+    else hint.textContent = "Inserisci la API Key DashScope";
   }
 }
 
@@ -405,9 +346,7 @@ function addComment(time, text, isCalibration = false) {
 
 function detectMotion() {
   const canvas = document.getElementById("canvas");
-  const prevCanvas = document.getElementById("prev-canvas");
   const ctx = canvas.getContext("2d");
-  const prevCtx = prevCanvas.getContext("2d");
   
   ctx.drawImage(document.getElementById("video"), 0, 0, 320, 240);
   const currentFrame = ctx.getImageData(0, 0, 320, 240);
@@ -430,7 +369,7 @@ function detectMotion() {
   
   liveState.lastFrameData = currentFrame;
   const motionPercent = (diff / (320 * 240)) * 100;
-  return motionPercent > 2; // 2% di pixel cambiati = movimento significativo
+  return motionPercent > 2;
 }
 
 async function calibratePlayers() {
@@ -453,7 +392,7 @@ async function calibratePlayers() {
 
     const prompt = `Analizza questa immagine di una partita di padel. Identifica la posizione dei 4 giocatori e conferma i colori delle maglie.
 Giocatori attesi: ${playerDesc}
-Rispondi brevemente confermando se vedi i giocatori e le loro posizioni (es: "Vedo 4 giocatori: Coppia A a sinistra con maglie rosse e bianche, Coppia B a destra con maglie blu e nere").`;
+Rispondi brevemente confermando se vedi i giocatori e le loro posizioni.`;
 
     const body = {
       model: state.model,
@@ -469,15 +408,19 @@ Rispondi brevemente confermando se vedi i giocatori e le loro posizioni (es: "Ve
       ]
     };
 
-    const headers = { "Content-Type": "application/json" };
-    if (state.apiKey) headers["Authorization"] = `Bearer ${state.apiKey}`;
-    if (state.provider === "openrouter") {
-      headers["HTTP-Referer"] = window.location.href;
-      headers["X-Title"] = "PadelCast AI";
-    }
+    const resp = await fetch(state.endpoint, { 
+      method: "POST", 
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${state.apiKey}`
+      }, 
+      body: JSON.stringify(body) 
+    });
 
-    const resp = await fetch(state.endpoint, { method: "POST", headers, body: JSON.stringify(body) });
-    if (!resp.ok) throw new Error(`API ${resp.status}`);
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`API ${resp.status}: ${errText.substring(0, 200)}`);
+    }
 
     const data = await resp.json();
     const text = data.choices?.[0]?.message?.content || "";
@@ -492,8 +435,8 @@ Rispondi brevemente confermando se vedi i giocatori e le loro posizioni (es: "Ve
   } catch (err) {
     console.error(err);
     const now = new Date().toLocaleTimeString("it-IT", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-    addComment(now, "⚠️ Calibrazione fallita: " + err.message, true);
-    liveState.calibrated = true; // Continua comunque
+    addComment(now, "⚠️ Calibrazione: " + err.message, true);
+    liveState.calibrated = true;
     setStatus("live", "In diretta");
   }
 }
@@ -503,10 +446,8 @@ async function captureAndAnalyze() {
   const video = document.getElementById("video");
   if (!video || video.readyState < 2) return;
 
-  // Rileva movimento
   liveState.motionDetected = detectMotion();
   if (!liveState.motionDetected && liveState.commentCount > 0) {
-    // Poco movimento, salta questo ciclo
     return;
   }
 
@@ -571,14 +512,14 @@ REGOLE TELECRONACA PADEL:
       ]
     };
 
-    const headers = { "Content-Type": "application/json" };
-    if (state.apiKey) headers["Authorization"] = `Bearer ${state.apiKey}`;
-    if (state.provider === "openrouter") {
-      headers["HTTP-Referer"] = window.location.href;
-      headers["X-Title"] = "PadelCast AI";
-    }
-
-    const resp = await fetch(state.endpoint, { method: "POST", headers, body: JSON.stringify(body) });
+    const resp = await fetch(state.endpoint, { 
+      method: "POST", 
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${state.apiKey}`
+      }, 
+      body: JSON.stringify(body) 
+    });
 
     if (!resp.ok) {
       const errText = await resp.text();
@@ -595,7 +536,6 @@ REGOLE TELECRONACA PADEL:
       if (liveState.history.length > 5) liveState.history.shift();
       liveState.commentCount++;
       
-      // Estrai punteggio se menzionato
       const scoreMatch = text.match(/(\d+)\s*-\s*(\d+)/);
       if (scoreMatch) {
         liveState.score.a = parseInt(scoreMatch[1]);
@@ -652,8 +592,8 @@ function processSpeak() {
 
 // === INIT ===
 renderPlayers();
-renderProviders();
 renderStyles();
+renderApiFields();
 checkReady();
 </script>
 </body>
