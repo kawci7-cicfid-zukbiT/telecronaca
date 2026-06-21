@@ -3,451 +3,429 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>PadelCast AI v2 — Telecronaca Live</title>
+<title>PadelCast AI v3</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0a0a0a; color: #f0f0f0; overflow: hidden; height: 100dvh; }
-  .setup { padding: 20px 16px; max-width: 480px; margin: 0 auto; overflow-y: auto; height: 100dvh; padding-bottom: 120px; }
-  .setup h1 { font-size: 22px; font-weight: 800; text-align: center; letter-spacing: -0.02em; }
-  .setup h1 span { color: #4ade80; }
-  .sub { font-size: 13px; color: #666; text-align: center; margin: 4px 0 20px; }
-  .label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #666; margin-bottom: 6px; }
-  .card { background: #161616; border-radius: 12px; padding: 14px; margin-bottom: 10px; border: 1px solid #222; }
-  .team-a { color: #4ade80; } .team-b { color: #f59e0b; }
-  input[type="text"], select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #2a2a2a; background: #111; color: #f0f0f0; font-size: 14px; outline: none; margin-bottom: 8px; }
-  .colors { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; }
-  .cdot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.12s; }
-  .cdot.sel { border-color: #4ade80; transform: scale(1.15); }
-  .cdot.wh { border-color: #444; } .cdot.wh.sel { border-color: #4ade80; }
-  .pbtn { padding: 6px 14px; border-radius: 6px; border: 1px solid #2a2a2a; background: #111; color: #888; cursor: pointer; font-size: 13px; }
-  .pbtn.on { border-color: #4ade80; background: #14532d; color: #4ade80; }
-  .hint { font-size: 11px; color: #555; margin-top: 4px; line-height: 1.4; }
-  .gobtn { width: 100%; padding: 14px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px; transition: background 0.2s; }
-  .gobtn.ok { background: #16a34a; color: #fff; } .gobtn.no { background: #222; color: #555; cursor: not-allowed; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#0a0a0a;color:#f0f0f0;overflow:hidden;height:100dvh}
+  .setup{padding:20px 16px;max-width:480px;margin:0 auto;overflow-y:auto;height:100dvh;padding-bottom:120px}
+  h1{font-size:22px;font-weight:800;text-align:center;letter-spacing:-0.02em}
+  h1 span{color:#4ade80}
+  .sub{font-size:13px;color:#666;text-align:center;margin:4px 0 20px}
+  .lb{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#555;margin-bottom:6px}
+  .cd{background:#161616;border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid #1e1e1e}
+  .ta{color:#4ade80}.tb{color:#f59e0b}
+  input[type="text"],input[type="password"],select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #252525;background:#0e0e0e;color:#f0f0f0;font-size:14px;outline:none;margin-bottom:8px}
+  .cols{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 0}
+  .dot{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .12s}
+  .dot.s{border-color:#4ade80;transform:scale(1.15)}
+  .dot.w{border-color:#333}.dot.w.s{border-color:#4ade80}
+  .pb{padding:6px 12px;border-radius:6px;border:1px solid #252525;background:#0e0e0e;color:#777;cursor:pointer;font-size:12px}
+  .pb.on{border-color:#4ade80;background:#14532d;color:#4ade80}
+  .ht{font-size:11px;color:#444;margin-top:4px;line-height:1.4}
+  .go{width:100%;padding:14px;border-radius:10px;border:none;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px}
+  .go.ok{background:#16a34a;color:#fff}.go.no{background:#1a1a1a;color:#444;cursor:not-allowed}
 
-  /* LIVE */
-  .live { display: flex; flex-direction: column; height: 100dvh; }
-  .vidbox { position: relative; flex-shrink: 0; background: #000; }
-  .vidbox video { width: 100%; display: block; }
-  .topbar { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
-  .pill { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.8); border-radius: 20px; padding: 5px 12px; backdrop-filter: blur(4px); }
-  .sdot { width: 8px; height: 8px; border-radius: 50%; }
-  .sdot.on { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 1.5s infinite; }
-  .sdot.wait { background: #eab308; }
-  .stxt { font-size: 12px; color: #fff; font-weight: 600; }
-  .scoreboard { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.85); border-radius: 12px; padding: 8px 12px; backdrop-filter: blur(4px); min-width: 120px; }
-  .score-team { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 2px 0; font-size: 13px; font-weight: 600; }
-  .score-num { font-family: monospace; font-size: 16px; font-weight: 800; color: #4ade80; min-width: 60px; text-align: right; }
-  .score-btn { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #333; background: #1a1a1a; color: #888; cursor: pointer; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-  .score-btn:active { background: #333; }
-  .legend { position: absolute; bottom: 8px; left: 8px; display: flex; gap: 5px; flex-wrap: wrap; }
-  .litem { background: rgba(0,0,0,0.8); border-radius: 10px; padding: 3px 10px; display: flex; align-items: center; gap: 5px; font-size: 10px; backdrop-filter: blur(4px); }
-  .ldot { width: 8px; height: 8px; border-radius: 50%; }
+  .live{display:flex;flex-direction:column;height:100dvh}
+  .vb{position:relative;flex-shrink:0;background:#000}
+  .vb video{width:100%;display:block}
+  .top{position:absolute;top:8px;left:8px;display:flex;align-items:center;gap:6px}
+  .pill{display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.8);border-radius:16px;padding:4px 10px;backdrop-filter:blur(4px)}
+  .sd{width:7px;height:7px;border-radius:50%}
+  .sd.on{background:#ef4444;box-shadow:0 0 6px #ef4444;animation:p 1.5s infinite}
+  .sd.w{background:#eab308}
+  .st{font-size:11px;color:#fff;font-weight:600}
+  .lg{position:absolute;bottom:6px;left:6px;display:flex;gap:4px;flex-wrap:wrap}
+  .li{background:rgba(0,0,0,.8);border-radius:8px;padding:2px 8px;display:flex;align-items:center;gap:4px;font-size:10px;backdrop-filter:blur(4px)}
+  .ld{width:7px;height:7px;border-radius:50%}
 
-  /* State indicator */
-  .state-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #111; border-bottom: 1px solid #1a1a1a; flex-shrink: 0; }
-  .state-icon { font-size: 14px; }
-  .state-label { font-size: 12px; color: #888; font-weight: 500; }
-  .state-label b { color: #f0f0f0; font-weight: 600; }
-  .rally-bar { flex: 1; height: 3px; background: #222; border-radius: 2px; overflow: hidden; }
-  .rally-fill { height: 100%; background: linear-gradient(90deg, #4ade80, #eab308, #ef4444); border-radius: 2px; transition: width 0.3s; }
+  .sbar{display:flex;align-items:center;gap:8px;padding:5px 12px;background:#111;border-bottom:1px solid #1a1a1a;flex-shrink:0}
+  .sbar .ic{font-size:13px}
+  .sbar .tx{font-size:11px;color:#777}
+  .sbar .tx b{color:#e0e0e0;font-weight:600}
 
-  .feed { flex: 1; overflow-y: auto; padding: 6px 12px; }
-  .crow { padding: 8px 10px; border-radius: 8px; margin-bottom: 3px; }
-  .crow.new { background: #161616; animation: fadeIn 0.3s ease; }
-  .crow.action { border-left: 3px solid #4ade80; }
-  .crow.punto { border-left: 3px solid #eab308; background: #1a1800; }
-  .crow.excitement { border-left: 3px solid #ef4444; background: #1a0000; }
-  .ctime { color: #4ade80; font-family: monospace; font-size: 10px; font-weight: 600; }
-  .ctext { font-size: 13px; line-height: 1.5; color: #ccc; margin-top: 2px; }
-  .ctext.hot { color: #fff; font-weight: 500; }
+  .feed{flex:1;overflow-y:auto;padding:6px 12px}
+  .cr{padding:8px 10px;border-radius:8px;margin-bottom:3px}
+  .cr.nw{animation:fi .3s ease}
+  .cr.act{border-left:3px solid #4ade80;background:#0a1a0a}
+  .cr.pt{border-left:3px solid #eab308;background:#1a1800}
+  .cr.hot{border-left:3px solid #ef4444;background:#1a0505}
+  .cr.sys{border-left:3px solid #555;background:#111}
+  .ct{color:#4ade80;font-family:monospace;font-size:10px;font-weight:600}
+  .cx{font-size:13px;line-height:1.5;color:#bbb;margin-top:2px}
+  .cx.h{color:#fff;font-weight:500;font-size:14px}
 
-  .bottombar { padding: 8px 12px 20px; flex-shrink: 0; display: flex; gap: 8px; }
-  .stopbtn { flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ef4444; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .bb{padding:8px 12px 20px;flex-shrink:0}
+  .sbtn{width:100%;padding:12px;border-radius:10px;border:none;background:#ef4444;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
 
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
 
 <div id="setup" class="setup">
   <div style="font-size:32px;text-align:center;margin-bottom:4px">🏓</div>
-  <h1>Padel<span>Cast</span> AI <sup style="font-size:11px;color:#888">v2</sup></h1>
-  <p class="sub">Multi-agente: osservatore + telecronista</p>
-  <div id="players-box"></div>
-  <div class="card" style="margin-top:16px">
-    <div class="label" style="color:#06b6d4">Connessione AI (Qwen VL)</div>
-    <div id="prov-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
-    <div id="api-fields"></div>
+  <h1>Padel<span>Cast</span> AI <sup style="font-size:10px;color:#555">v3</sup></h1>
+  <p class="sub">Osserva → capisce → commenta solo quando serve</p>
+  <div id="pbox"></div>
+
+  <div class="cd" style="margin-top:16px">
+    <div class="lb" style="color:#06b6d4">Vision AI (Qwen VL)</div>
+    <div id="pvb" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <div id="apif"></div>
   </div>
-  <button class="gobtn no" id="gobtn" disabled onclick="startLive()">Avvia telecronaca</button>
-  <div id="gohint" style="text-align:center;font-size:12px;color:#555;margin-top:8px">Compila tutto per iniziare</div>
+
+  <div class="cd">
+    <div class="lb" style="color:#ec4899">Voce telecronista</div>
+    <div id="ttsbtns" style="display:flex;gap:6px;margin-bottom:10px"></div>
+    <div id="ttsf"></div>
+  </div>
+
+  <button class="go no" id="go" disabled onclick="startLive()">Avvia telecronaca</button>
+  <div id="ghint" style="text-align:center;font-size:12px;color:#444;margin-top:8px"></div>
 </div>
 
 <div id="live" class="live" style="display:none">
-  <div class="vidbox">
+  <div class="vb">
     <video id="vid" autoplay playsinline muted></video>
     <canvas id="cnv" style="display:none"></canvas>
-    <div class="topbar">
-      <div class="pill"><div class="sdot wait" id="sdot"></div><span class="stxt" id="stxt">Avvio...</span></div>
-      <div class="pill" id="spk" style="display:none"><span style="font-size:11px;color:#4ade80">🔊 Parlando</span></div>
+    <div class="top">
+      <div class="pill"><div class="sd w" id="sd"></div><span class="st" id="stx">Avvio...</span></div>
+      <div class="pill" id="spk" style="display:none"><span style="font-size:10px;color:#4ade80">🔊</span></div>
     </div>
-    <div class="scoreboard" id="scoreboard"></div>
-    <div class="legend" id="legend"></div>
+    <div class="lg" id="lg"></div>
   </div>
-  <div class="state-bar">
-    <span class="state-icon" id="state-icon">⏸</span>
-    <span class="state-label" id="state-label">In attesa...</span>
-    <div class="rally-bar"><div class="rally-fill" id="rally-fill" style="width:0%"></div></div>
+  <div class="sbar">
+    <span class="ic" id="sic">⏸</span>
+    <span class="tx" id="slb">In attesa...</span>
   </div>
   <div class="feed" id="feed"></div>
-  <div class="bottombar">
-    <button class="stopbtn" onclick="stopLive()">⏹ Ferma</button>
-  </div>
+  <div class="bb"><button class="sbtn" onclick="stopLive()">⏹ Ferma</button></div>
 </div>
 
 <script>
-const COLORS = [
-  {n:"Rosso",h:"#DC2626"},{n:"Blu",h:"#2563EB"},{n:"Bianco",h:"#FFFFFF"},{n:"Nero",h:"#1a1a1a"},
-  {n:"Verde",h:"#16A34A"},{n:"Giallo",h:"#EAB308"},{n:"Arancione",h:"#EA580C"},{n:"Rosa",h:"#EC4899"},
-  {n:"Viola",h:"#7C3AED"},{n:"Azzurro",h:"#06B6D4"},{n:"Grigio",h:"#6B7280"},
-];
-const PROVS = [
-  {id:"openrouter",name:"OpenRouter",url:"https://openrouter.ai/api/v1/chat/completions",model:"qwen/qwen-2.5-vl-72b-instruct",hint:"openrouter.ai → API Key. Supporta CORS. Consigliato per browser."},
-  {id:"dashscope",name:"DashScope",url:"https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",model:"qwen-vl-max",hint:"dashscope.aliyun.com → API Key."},
-  {id:"ollama",name:"Ollama",url:"http://localhost:11434/v1/chat/completions",model:"qwen2.5-vl:7b",hint:"ollama pull qwen2.5-vl:7b — locale, gratis, no API key."},
-  {id:"custom",name:"Custom",url:"",model:"",hint:"Qualsiasi API OpenAI-compatibile con vision."},
+const CL=[{n:"Rosso",h:"#DC2626"},{n:"Blu",h:"#2563EB"},{n:"Bianco",h:"#FFFFFF"},{n:"Nero",h:"#1a1a1a"},{n:"Verde",h:"#16A34A"},{n:"Giallo",h:"#EAB308"},{n:"Arancione",h:"#EA580C"},{n:"Rosa",h:"#EC4899"},{n:"Viola",h:"#7C3AED"},{n:"Azzurro",h:"#06B6D4"},{n:"Grigio",h:"#6B7280"}];
+
+const PV=[
+  {id:"openrouter",nm:"OpenRouter",url:"https://openrouter.ai/api/v1/chat/completions",md:"qwen/qwen-2.5-vl-72b-instruct",ht:"openrouter.ai — funziona dal browser, CORS ok."},
+  {id:"dashscope",nm:"DashScope",url:"https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",md:"qwen-vl-max",ht:"API ufficiale Alibaba."},
+  {id:"ollama",nm:"Ollama",url:"http://localhost:11434/v1/chat/completions",md:"qwen2.5-vl:7b",ht:"Locale, gratis. ollama pull qwen2.5-vl:7b"},
 ];
 
-let S = {
-  players: [{name:"",shirt:""},{name:"",shirt:""},{name:"",shirt:""},{name:"",shirt:""}],
-  prov: "openrouter", key: "", url: PROVS[0].url, model: PROVS[0].model,
+let S={
+  pl:[{nm:"",sh:""},{nm:"",sh:""},{nm:"",sh:""},{nm:"",sh:""}],
+  pv:"openrouter",key:"",url:PV[0].url,md:PV[0].md,
+  tts:"browser", elKey:"", elVoice:"",
 };
 
-let GAME = {
-  stream: null, captureInterval: null, analyzeInterval: null,
-  frames: [], // buffer of recent base64 frames
-  state: "idle", // idle | serving | rally | point_ended | pausa
-  rallyLength: 0,
-  history: [],
-  score: {a: "0", b: "0"}, // padel scoring
-  lastEvent: "",
-  processing: false,
+let G={
+  stream:null, capI:null, anaI:null,
+  frames:[], state:"idle",
+  pointActive:false, pointCount:0, commentedPoints:0,
+  history:[], processing:false, rallyFrames:0,
+  skipNext: false,
 };
 
-// ============ SETUP UI ============
-function renderPlayers() {
-  const box = document.getElementById("players-box");
-  box.innerHTML = "";
-  S.players.forEach((p, i) => {
-    const d = document.createElement("div"); d.className = "card";
-    const tc = i < 2 ? "team-a" : "team-b";
-    const tn = i < 2 ? `Coppia A — Giocatore ${i+1}` : `Coppia B — Giocatore ${i-1}`;
-    d.innerHTML = `<div class="label ${tc}">${tn}</div>
-      <input type="text" placeholder="Nome" value="${p.name}" oninput="S.players[${i}].name=this.value;chk()">
-      <div class="label">Maglia</div><div class="colors" id="c${i}"></div>`;
-    box.appendChild(d);
-    const cd = d.querySelector(`#c${i}`);
-    COLORS.forEach(c => {
-      const dot = document.createElement("div");
-      dot.className = `cdot${p.shirt===c.n?" sel":""}${c.n==="Bianco"?" wh":""}`;
-      dot.style.backgroundColor = c.h; dot.title = c.n;
-      dot.onclick = () => { S.players[i].shirt = c.n; renderPlayers(); chk(); };
-      cd.appendChild(dot);
-    });
+// ===== SETUP =====
+function rP(){
+  const b=document.getElementById("pbox");b.innerHTML="";
+  S.pl.forEach((p,i)=>{
+    const d=document.createElement("div");d.className="cd";
+    const tc=i<2?"ta":"tb", tn=i<2?`Coppia A — G${i+1}`:`Coppia B — G${i-1}`;
+    d.innerHTML=`<div class="lb ${tc}">${tn}</div><input type="text" placeholder="Nome" value="${p.nm}" oninput="S.pl[${i}].nm=this.value;chk()"><div class="lb">Maglia</div><div class="cols" id="c${i}"></div>`;
+    b.appendChild(d);
+    const cd=d.querySelector(`#c${i}`);
+    CL.forEach(c=>{const dt=document.createElement("div");dt.className=`dot${p.sh===c.n?" s":""}${c.n==="Bianco"?" w":""}`;dt.style.backgroundColor=c.h;dt.title=c.n;dt.onclick=()=>{S.pl[i].sh=c.n;rP();chk()};cd.appendChild(dt)});
   });
 }
 
-function renderProvs() {
-  const b = document.getElementById("prov-btns"); b.innerHTML = "";
-  PROVS.forEach(p => {
-    const btn = document.createElement("button");
-    btn.className = `pbtn${S.prov===p.id?" on":""}`; btn.textContent = p.name;
-    btn.onclick = () => { S.prov=p.id; S.url=p.url; S.model=p.model; if(p.id==="ollama") S.key=""; renderProvs(); chk(); };
-    b.appendChild(btn);
-  });
-  const prov = PROVS.find(p=>p.id===S.prov);
-  const f = document.getElementById("api-fields");
-  f.innerHTML = `${S.prov!=="ollama"?`<input type="text" placeholder="API Key" value="${S.key}" oninput="S.key=this.value;chk()">`:""}
+function rPv(){
+  const b=document.getElementById("pvb");b.innerHTML="";
+  PV.forEach(p=>{const bt=document.createElement("button");bt.className=`pb${S.pv===p.id?" on":""}`;bt.textContent=p.nm;bt.onclick=()=>{S.pv=p.id;S.url=p.url;S.md=p.md;if(p.id==="ollama")S.key="";rPv();chk()};b.appendChild(bt)});
+  const pv=PV.find(p=>p.id===S.pv);
+  document.getElementById("apif").innerHTML=`${S.pv!=="ollama"?`<input type="text" placeholder="API Key Vision" value="${S.key}" oninput="S.key=this.value;chk()">`:""}
     <input type="text" placeholder="Endpoint" value="${S.url}" oninput="S.url=this.value;chk()">
-    <input type="text" placeholder="Modello" value="${S.model}" oninput="S.model=this.value;chk()">
-    <div class="hint">${prov.hint}</div>`;
+    <input type="text" placeholder="Modello" value="${S.md}" oninput="S.md=this.value;chk()">
+    <div class="ht">${pv.ht}</div>`;
 }
 
-function chk() {
-  const pok = S.players.every(p=>p.name&&p.shirt);
-  const aok = S.url && S.model && (S.prov==="ollama"||S.key);
-  const btn = document.getElementById("gobtn");
-  const hint = document.getElementById("gohint");
-  if (pok && aok) { btn.className="gobtn ok"; btn.disabled=false; hint.textContent="Tutto pronto!"; hint.style.color="#4ade80"; }
-  else { btn.className="gobtn no"; btn.disabled=true; hint.style.color="#555"; hint.textContent=!pok?"Compila nome e maglia per tutti":"Configura la connessione API"; }
-}
-
-// ============ LIVE ============
-async function startLive() {
-  document.getElementById("setup").style.display = "none";
-  document.getElementById("live").style.display = "flex";
-
-  // Legend
-  const lg = document.getElementById("legend"); lg.innerHTML = "";
-  S.players.forEach(p => {
-    const c = COLORS.find(x=>x.n===p.shirt);
-    const d = document.createElement("div"); d.className = "litem";
-    d.innerHTML = `<div class="ldot" style="background:${c?.h||"#888"}"></div>${p.name}`;
-    lg.appendChild(d);
+function rTTS(){
+  const b=document.getElementById("ttsbtns");b.innerHTML="";
+  [{id:"browser",nm:"Browser (gratis)"},{id:"elevenlabs",nm:"ElevenLabs (naturale)"}].forEach(t=>{
+    const bt=document.createElement("button");bt.className=`pb${S.tts===t.id?" on":""}`;bt.textContent=t.nm;
+    bt.onclick=()=>{S.tts=t.id;rTTS();chk()};b.appendChild(bt);
   });
-
-  // Scoreboard
-  renderScore();
-
-  // Camera
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}}, audio:false });
-    GAME.stream = stream;
-    const vid = document.getElementById("vid");
-    vid.srcObject = stream;
-    vid.onloadeddata = () => {
-      setStatus("on","In diretta");
-      // Capture frames every 2 seconds into buffer
-      GAME.captureInterval = setInterval(captureFrame, 2000);
-      // Analyze every 6 seconds
-      setTimeout(analyze, 3000);
-      GAME.analyzeInterval = setInterval(analyze, 7000);
-    };
-  } catch(e) {
-    addComment("err","Sistema","Errore telecamera: "+e.message);
+  const f=document.getElementById("ttsf");
+  if(S.tts==="elevenlabs"){
+    f.innerHTML=`<input type="text" placeholder="ElevenLabs API Key" value="${S.elKey}" oninput="S.elKey=this.value;chk()">
+      <input type="text" placeholder="Voice ID (es: pNInz6obpgDQGcFmaJgB)" value="${S.elVoice}" oninput="S.elVoice=this.value;chk()">
+      <div class="ht">elevenlabs.io → gratis 10k char/mese. Scegli una voce italiana maschile. Copia il Voice ID dalla libreria voci.</div>`;
+  } else {
+    f.innerHTML=`<div class="ht">Usa il sintetizzatore vocale del telefono. Funziona subito ma suona artificiale.</div>`;
   }
 }
 
-function renderScore() {
-  const sb = document.getElementById("scoreboard");
-  const tA = S.players.slice(0,2).map(p=>p.name.split(" ")[0]).join("/");
-  const tB = S.players.slice(2,4).map(p=>p.name.split(" ")[0]).join("/");
-  sb.innerHTML = `
-    <div class="score-team"><span style="color:#4ade80;font-size:11px">${tA}</span>
-      <span class="score-num" id="scoreA">${GAME.score.a}</span>
-    </div>
-    <div class="score-team"><span style="color:#f59e0b;font-size:11px">${tB}</span>
-      <span class="score-num" id="scoreB">${GAME.score.b}</span>
-    </div>`;
+function chk(){
+  const pok=S.pl.every(p=>p.nm&&p.sh);
+  const aok=S.url&&S.md&&(S.pv==="ollama"||S.key);
+  const tok=S.tts==="browser"||(S.elKey&&S.elVoice);
+  const ok=pok&&aok&&tok;
+  const btn=document.getElementById("go");
+  btn.className=ok?"go ok":"go no";btn.disabled=!ok;
+  const h=document.getElementById("ghint");
+  h.textContent=!pok?"Configura tutti i giocatori":!aok?"Configura Vision AI":!tok?"Configura la voce":"Pronto!";
+  h.style.color=ok?"#4ade80":"#444";
 }
 
-function captureFrame() {
-  const vid = document.getElementById("vid");
-  if (!vid || vid.readyState < 2) return;
-  const cnv = document.getElementById("cnv");
-  cnv.width = 480; cnv.height = 360;
-  cnv.getContext("2d").drawImage(vid, 0, 0, 480, 360);
-  const b64 = cnv.toDataURL("image/jpeg", 0.65).split(",")[1];
-  GAME.frames.push(b64);
-  if (GAME.frames.length > 4) GAME.frames.shift();
+// ===== LIVE =====
+async function startLive(){
+  document.getElementById("setup").style.display="none";
+  document.getElementById("live").style.display="flex";
+  const lg=document.getElementById("lg");lg.innerHTML="";
+  S.pl.forEach(p=>{const c=CL.find(x=>x.n===p.sh);const d=document.createElement("div");d.className="li";d.innerHTML=`<div class="ld" style="background:${c?.h||"#888"}"></div>${p.nm}`;lg.appendChild(d)});
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}},audio:false});
+    G.stream=stream;
+    const vid=document.getElementById("vid");vid.srcObject=stream;
+    vid.onloadeddata=()=>{
+      setSt("on","In diretta");
+      G.capI=setInterval(capFrame,1500);
+      setTimeout(analyze,3000);
+      G.anaI=setInterval(analyze,5000);
+    };
+  }catch(e){addC("sys",ts(),"Errore telecamera: "+e.message)}
 }
 
-async function analyze() {
-  if (GAME.processing || GAME.frames.length < 2) return;
-  GAME.processing = true;
+function capFrame(){
+  const vid=document.getElementById("vid");if(!vid||vid.readyState<2)return;
+  const c=document.getElementById("cnv");c.width=480;c.height=360;
+  c.getContext("2d").drawImage(vid,0,0,480,360);
+  G.frames.push(c.toDataURL("image/jpeg",0.6).split(",")[1]);
+  if(G.frames.length>5)G.frames.shift();
+}
 
-  const framesToSend = GAME.frames.slice(-3);
-  const playerDesc = S.players.map((p,i) => `${p.name} (maglia ${p.shirt}, coppia ${i<2?"A":"B"})`).join(", ");
-  const recentHistory = GAME.history.slice(-4).join("\n");
+async function analyze(){
+  if(G.processing||G.frames.length<2)return;
+  G.processing=true;
 
-  try {
-    // === AGENT 1: OSSERVATORE — analizza lo stato del gioco ===
-    const observerContent = framesToSend.map(f => ({
-      type: "image_url", image_url: { url: `data:image/jpeg;base64,${f}` }
-    }));
-    observerContent.push({
-      type: "text",
-      text: `Sei un OSSERVATORE esperto di padel. Analizzi queste ${framesToSend.length} immagini consecutive (scattate a 2 secondi di distanza) di una partita di padel.
+  const frm=G.frames.slice(-3);
+  const pDesc=S.pl.map((p,i)=>`${p.nm} (maglia ${p.sh}, coppia ${i<2?"A":"B"})`).join(", ");
 
-GIOCATORI: ${playerDesc}
+  try{
+    // ====== AGENTE 1: OSSERVATORE ======
+    const obsContent=frm.map(f=>({type:"image_url",image_url:{url:`data:image/jpeg;base64,${f}`}}));
+    obsContent.push({type:"text",text:`Sei un OSSERVATORE di padel. Guardi 3 frame consecutivi (1.5s tra uno e l'altro).
+GIOCATORI: ${pDesc}
+STATO PRECEDENTE: ${G.state}
 
-STATO PRECEDENTE: ${GAME.state}
-ULTIMO EVENTO: ${GAME.lastEvent || "nessuno"}
+RISPONDI SOLO con JSON valido. Nessun altro testo.
 
-Il tuo compito è determinare COSA STA SUCCEDENDO. Rispondi SOLO con un JSON valido, senza altro testo:
+REGOLE PRECISE per determinare lo stato:
+- "battuta": un giocatore è FERMO in fondo al campo, gli altri sono posizionati, si sta per servire o sta servendo. Il giocatore ha il braccio alzato o la palla in mano.
+- "gioco": i giocatori si MUOVONO attivamente, ci sono cambi di posizione tra i frame, la palla è in gioco.
+- "punto_finito": i giocatori si stanno dando il CINQUE, si abbracciano, esultano, alzano il pugno, o camminano verso il centro.
+- "pausa": i giocatori camminano lentamente, bevono, parlano, cambiano campo, raccolgono palle.
+- "incerto": NON riesci a vedere chiaramente cosa succede. Luce scarsa, inquadratura confusa, troppo lontani.
+
+IMPORTANTISSIMO:
+- Se NON sei sicuro al 70%, metti "incerto". È MEGLIO dire "incerto" che inventare.
+- NON inventare azioni specifiche (tipo di colpo) se non le vedi CHIARAMENTE.
+- Guarda le DIFFERENZE tra i 3 frame per capire se c'è movimento.
+
+JSON:
 {
-  "stato": "pausa|servizio|rally|punto_finito",
-  "azione": "descrizione breve di cosa vedi (chi ha la palla, che colpo sta facendo, posizioni)",
-  "giocatore_protagonista": "nome del giocatore protagonista dell'azione o null",
-  "intensita": 1-10,
-  "dettagli": "cosa noti di specifico: tipo di colpo (bandeja, vibora, smash, volée, lob, drive, chiquita), posizione in campo, se qualcuno è a rete o in fondo"
-}
+  "stato": "battuta|gioco|punto_finito|pausa|incerto",
+  "confidenza": 1-10,
+  "cosa_vedo": "descrivi SOLO quello che vedi realmente, senza interpretare",
+  "giocatori_visibili": ["nomi che riconosci dal colore maglia"],
+  "movimento": "fermo|lento|veloce|non_chiaro"
+}`});
 
-REGOLE:
-- Se i giocatori sono fermi o si stanno preparando → "pausa"
-- Se qualcuno sta per servire o sta servendo → "servizio"
-- Se la palla è in gioco e i giocatori si muovono attivamente → "rally"
-- Se vedi la palla ferma dopo uno scambio, o un giocatore festeggia → "punto_finito"
-- Identifica i giocatori DAL COLORE DELLA MAGLIA
-- L'intensità va da 1 (palla morta) a 10 (scambio incredibile)
-- Rispondi SOLO con il JSON`
-    });
+    const obsR=await callAPI([{role:"user",content:obsContent}]);
+    let ev;
+    try{ev=JSON.parse(obsR.replace(/```json\s*/g,"").replace(/```/g,"").trim())}
+    catch(e){G.processing=false;return}
 
-    const obsResp = await callAPI([{ role: "user", content: observerContent }]);
-    let gameEvent;
-    try {
-      const clean = obsResp.replace(/```json\s*/g,"").replace(/```/g,"").trim();
-      gameEvent = JSON.parse(clean);
-    } catch(e) {
-      gameEvent = { stato: "rally", azione: obsResp.substring(0,100), intensita: 5, dettagli: "" };
+    // Ignora se incerto o bassa confidenza
+    if(ev.stato==="incerto"||ev.confidenza<5){
+      updateBar("❓","Non chiaro — aspetto...");
+      G.processing=false;return;
     }
 
-    // Update state
-    const prevState = GAME.state;
-    GAME.state = gameEvent.stato || "rally";
-    GAME.lastEvent = gameEvent.azione || "";
+    const prev=G.state;
+    G.state=ev.stato;
+    updateBar(
+      {battuta:"🎾",gioco:"⚡",punto_finito:"🙌",pausa:"⏸"}[ev.stato]||"❓",
+      {battuta:"Servizio",gioco:"Gioco attivo",punto_finito:"Punto!",pausa:"Pausa"}[ev.stato]||ev.stato
+    );
 
-    // Update UI state bar
-    updateStateBar(gameEvent);
+    // ====== LOGICA PUNTI ======
+    // Punto inizia con la battuta
+    if(ev.stato==="battuta"&&prev!=="battuta"){
+      G.pointActive=true;
+      G.rallyFrames=0;
+      G.pointCount++;
+    }
 
-    // === AGENT 2: TELECRONISTA — genera il commento ===
-    const shouldComment = decideIfComment(prevState, gameEvent);
+    // Rally in corso
+    if(ev.stato==="gioco"&&G.pointActive){
+      G.rallyFrames++;
+    }
 
-    if (shouldComment) {
-      if (GAME.state === "rally") GAME.rallyLength++;
-      else if (GAME.state !== "rally") GAME.rallyLength = 0;
+    // Punto finisce con esultanza/cinque
+    if(ev.stato==="punto_finito"&&G.pointActive){
+      G.pointActive=false;
 
-      const commentPrompt = buildCommentaryPrompt(gameEvent, playerDesc, recentHistory);
-      const commentary = await callAPI([{ role: "user", content: commentPrompt }]);
+      // ====== DECISIONE: COMMENTO QUESTO PUNTO? ======
+      // Commenta solo ~35% dei punti, favorendo quelli con rally lunghi
+      const isLongRally=G.rallyFrames>=4; // rally di almeno 6+ secondi
+      const shouldComment=isLongRally||Math.random()<0.35;
 
-      if (commentary && commentary.length > 5) {
-        const type = gameEvent.intensita >= 8 ? "excitement" : gameEvent.stato === "punto_finito" ? "punto" : "action";
-        const now = new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-        addComment(type, now, commentary);
-        GAME.history.push(commentary);
-        if (GAME.history.length > 8) GAME.history.shift();
-        speakText(commentary);
+      if(shouldComment&&!G.skipNext){
+        G.commentedPoints++;
+
+        // ====== AGENTE 2: TELECRONISTA ======
+        const lastComments=G.history.slice(-3).join("\n");
+        const prompt=`Sei un telecronista di padel ITALIANO. Non un robot, non un'intelligenza artificiale. Sei uno che AMA questo sport, che è lì a bordo campo col cuore in gola.
+
+COSA È APPENA SUCCESSO:
+- Stato: ${ev.stato}
+- Quello che si vede: ${ev.cosa_vedo}
+- Giocatori riconosciuti: ${(ev.giocatori_visibili||[]).join(", ")||"non chiari"}
+- Durata dello scambio: ${G.rallyFrames>=4?"lungo, intenso":G.rallyFrames>=2?"medio":"breve"}
+- Punto numero: ${G.pointCount}
+
+GIOCATORI: ${pDesc}
+
+${lastComments?`ULTIMI COMMENTI (non ripetere):\n${lastComments}`:""}
+
+COME DEVI PARLARE:
+- Come un amico appassionato che sta guardando la partita con te al bar
+- Frasi CORTE. "Madonna che punto!" "Eh no dai, quella era dentro!" "Senti che botta!"
+- Puoi usare espressioni colloquiali italiane: "Mamma mia", "Dai dai dai!", "Noo!", "Eccola!", "Ma che ha fatto?!"
+- ${isLongRally?"Lo scambio è stato LUNGO — fallo sentire, cresci col tono, esplodi alla fine!":""}
+- NON descrivere colpo per colpo come un manuale. Tu REAGISCI a quello che vedi.
+- Se non hai visto bene l'azione, commenta l'ENERGIA, la TENSIONE, il MOMENTO — non inventare colpi specifici.
+- MASSIMO 2 frasi. Anche una sola va benissimo.
+- MAI iniziare con "Ecco", "Allora", "In questa azione"
+- MAI menzionare che sei un AI o telecronista
+
+Solo il commento, nient'altro.`;
+
+        const comm=await callAPI([{role:"user",content:prompt}]);
+        if(comm&&comm.length>3){
+          const type=isLongRally?"hot":"pt";
+          addC(type,ts(),comm);
+          G.history.push(comm);if(G.history.length>6)G.history.shift();
+          await speak(comm);
+        }
+        // Dopo un commento, salta il prossimo per non saturare
+        G.skipNext=true;
+      } else {
+        G.skipNext=false;
       }
     }
 
-    setStatus("on","In diretta");
-  } catch(e) {
+    // Commento sulla battuta (solo ogni tanto)
+    if(ev.stato==="battuta"&&prev!=="battuta"&&Math.random()<0.25){
+      const servP=(ev.giocatori_visibili||[])[0]||"il giocatore";
+      const servComm=await callAPI([{role:"user",content:`Sei un telecronista di padel italiano informale e appassionato. ${servP} sta per servire. Punto numero ${G.pointCount}.
+${G.history.length?`Ultimo commento: "${G.history[G.history.length-1]}" — NON ripetere concetti simili.`:""}
+Crea TENSIONE in UNA frase corta prima della battuta. Tipo: "Vediamo cosa tira fuori ${servP}..." o "Attenzione qui..." o "Ora si fa sul serio."
+NON menzionare che sei AI. Solo la frase.`}]);
+      if(servComm&&servComm.length>3){
+        addC("act",ts(),servComm);
+        G.history.push(servComm);if(G.history.length>6)G.history.shift();
+        await speak(servComm);
+      }
+    }
+
+    setSt("on","In diretta");
+  }catch(e){
     console.error(e);
-    const now = new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-    addComment("err", now, "⚠️ "+e.message);
-  } finally {
-    GAME.processing = false;
+    addC("sys",ts(),"⚠️ "+e.message);
+  }finally{G.processing=false}
+}
+
+// ===== API =====
+async function callAPI(msgs){
+  const h={"Content-Type":"application/json"};
+  if(S.key)h["Authorization"]=`Bearer ${S.key}`;
+  if(S.pv==="openrouter"){h["HTTP-Referer"]=location.href;h["X-Title"]="PadelCast"}
+  const r=await fetch(S.url,{method:"POST",headers:h,body:JSON.stringify({model:S.md,max_tokens:250,messages:msgs})});
+  if(!r.ok)throw new Error(`API ${r.status}: ${(await r.text()).substring(0,120)}`);
+  const d=await r.json();return d.choices?.[0]?.message?.content||"";
+}
+
+// ===== TTS =====
+async function speak(text){
+  if(S.tts==="elevenlabs")return speakEL(text);
+  return speakBrowser(text);
+}
+
+function speakBrowser(text){
+  return new Promise(res=>{
+    document.getElementById("spk").style.display="flex";
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="it-IT";u.rate=1.15;u.pitch=1.1;
+    u.onend=u.onerror=()=>{document.getElementById("spk").style.display="none";res()};
+    speechSynthesis.speak(u);
+  });
+}
+
+async function speakEL(text){
+  document.getElementById("spk").style.display="flex";
+  try{
+    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${S.elVoice}`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","xi-api-key":S.elKey},
+      body:JSON.stringify({
+        text,
+        model_id:"eleven_multilingual_v2",
+        voice_settings:{stability:0.35,similarity_boost:0.8,style:0.65,use_speaker_boost:true}
+      })
+    });
+    if(!r.ok)throw new Error("ElevenLabs error "+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    await new Promise(res=>{
+      const a=new Audio(url);
+      a.onended=a.onerror=()=>{URL.revokeObjectURL(url);res()};
+      a.play().catch(()=>res());
+    });
+  }catch(e){
+    console.error("ElevenLabs fallback to browser:",e);
+    await speakBrowser(text);
+  }finally{
+    document.getElementById("spk").style.display="none";
   }
 }
 
-function decideIfComment(prevState, event) {
-  // Always comment on state transitions
-  if (prevState !== event.stato) return true;
-  // During rally, comment on high intensity or every few cycles
-  if (event.stato === "rally" && event.intensita >= 6) return true;
-  if (event.stato === "rally" && GAME.rallyLength % 2 === 0) return true;
-  // Comment on serves
-  if (event.stato === "servizio") return true;
-  return false;
+// ===== UI =====
+function setSt(t,x){document.getElementById("sd").className=`sd ${t==="on"?"on":"w"}`;document.getElementById("stx").textContent=x}
+function updateBar(ic,tx){document.getElementById("sic").textContent=ic;document.getElementById("slb").innerHTML=`<b>${tx}</b>`}
+function ts(){return new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}
+
+function addC(type,time,text){
+  const f=document.getElementById("feed");
+  const prev=f.querySelector(".nw");if(prev)prev.classList.remove("nw");
+  const r=document.createElement("div");
+  r.className=`cr nw ${type}`;
+  r.innerHTML=`<div class="ct">${time}</div><div class="cx${type==="hot"?" h":""}">${text}</div>`;
+  f.appendChild(r);f.scrollTop=f.scrollHeight;
 }
 
-function buildCommentaryPrompt(event, playerDesc, recentHistory) {
-  const rallyContext = GAME.rallyLength > 0 ? `Lo scambio dura già da ${GAME.rallyLength * 2} secondi circa.` : "";
-
-  return `Sei un TELECRONISTA ITALIANO di padel, appassionato, competente e coinvolgente. Come Pierluigi Pardo o Fabio Caressa ma per il padel.
-
-SITUAZIONE ATTUALE:
-- Stato: ${event.stato}
-- Azione: ${event.azione}
-- Protagonista: ${event.giocatore_protagonista || "non chiaro"}
-- Intensità: ${event.intensita}/10
-- Dettagli tecnici: ${event.dettagli}
-- ${rallyContext}
-
-GIOCATORI: ${playerDesc}
-
-${recentHistory ? `ULTIMI COMMENTI (NON ripetere concetti simili):\n${recentHistory}` : ""}
-
-GENERA UN COMMENTO seguendo queste regole:
-${event.stato === "pausa" ? `- Breve, riflessivo. Commenta la tattica, cosa potrebbe succedere. Tono calmo ma partecipe. 1 frase.` : ""}
-${event.stato === "servizio" ? `- Anticipa il punto, crea tensione. "Si prepara...", "Attenzione ora...", "Vediamo cosa esce...". 1 frase tesa.` : ""}
-${event.stato === "rally" && event.intensita < 6 ? `- Descrivi l'azione con ritmo. Usa termini tecnici del padel (bandeja, vibora, chiquita, bajada, pared). 1-2 frasi con ritmo crescente.` : ""}
-${event.stato === "rally" && event.intensita >= 6 ? `- ESPLODI! Scambio intenso! Frasi rapide, esclamazioni! "CHE SCAMBIO!", "Incredibile!", voce che sale! Ma con sostanza tecnica. 2 frasi max.` : ""}
-${event.stato === "punto_finito" ? `- Celebra o commisera. Se è stato un bel punto, entusiasmo. Commenta la qualità del colpo finale. Anticipa il prossimo. 1-2 frasi.` : ""}
-
-STILE:
-- VIETATO essere robotici o didascalici. Sei IN DIRETTA, col cuore in gola.
-- Usa esclamazioni naturali: "Mamma mia!", "Che classe!", "No no no...", "Eccola!", "Ci crede!", "Attenzione!"
-- Varia il ritmo: frasi corte nei momenti caldi, più distese nelle pause
-- Se non vedi bene cosa succede, commenta l'atmosfera e la tensione senza inventare azioni specifiche
-- Chiama i giocatori PER NOME quando possibile
-- MAI iniziare con "Ecco" o "Allora"
-- MAI dire "come telecronista" o "in qualità di"
-
-Rispondi SOLO con il commento, nient'altro.`;
-}
-
-function updateStateBar(event) {
-  const icon = document.getElementById("state-icon");
-  const label = document.getElementById("state-label");
-  const fill = document.getElementById("rally-fill");
-
-  const icons = { pausa: "⏸", servizio: "🎾", rally: "⚡", punto_finito: "✅" };
-  const labels = { pausa: "Pausa", servizio: "Servizio", rally: "Rally attivo", punto_finito: "Punto!" };
-  icon.textContent = icons[event.stato] || "⏸";
-  label.innerHTML = `<b>${labels[event.stato] || event.stato}</b> — intensità ${event.intensita || 0}/10`;
-  fill.style.width = ((event.intensita || 0) * 10) + "%";
-}
-
-// ============ API CALL ============
-async function callAPI(messages) {
-  const headers = { "Content-Type": "application/json" };
-  if (S.key) headers["Authorization"] = `Bearer ${S.key}`;
-  if (S.prov === "openrouter") { headers["HTTP-Referer"] = location.href; headers["X-Title"] = "PadelCast AI"; }
-
-  const resp = await fetch(S.url, {
-    method: "POST", headers,
-    body: JSON.stringify({ model: S.model, max_tokens: 300, messages })
-  });
-  if (!resp.ok) throw new Error(`API ${resp.status}: ${(await resp.text()).substring(0,150)}`);
-  const data = await resp.json();
-  return data.choices?.[0]?.message?.content || "";
-}
-
-// ============ UI HELPERS ============
-function setStatus(type, text) {
-  document.getElementById("sdot").className = `sdot ${type === "on" ? "on" : "wait"}`;
-  document.getElementById("stxt").textContent = text;
-}
-
-function addComment(type, time, text) {
-  const feed = document.getElementById("feed");
-  const prev = feed.querySelector(".new"); if (prev) prev.classList.remove("new");
-  const row = document.createElement("div");
-  row.className = `crow new ${type}`;
-  row.innerHTML = `<div class="ctime">${time}</div><div class="ctext${type==="excitement"?" hot":""}">${text}</div>`;
-  feed.appendChild(row);
-  feed.scrollTop = feed.scrollHeight;
-}
-
-// ============ TTS ============
-let ttsQueue = [], ttsActive = false;
-function speakText(text) { ttsQueue.push(text); runTTS(); }
-function runTTS() {
-  if (ttsActive || !ttsQueue.length) return;
-  ttsActive = true;
-  document.getElementById("spk").style.display = "flex";
-  const u = new SpeechSynthesisUtterance(ttsQueue.shift());
-  u.lang = "it-IT"; u.rate = 1.1; u.pitch = 1.1;
-  u.onend = u.onerror = () => { ttsActive=false; document.getElementById("spk").style.display="none"; runTTS(); };
-  speechSynthesis.speak(u);
-}
-
-function stopLive() {
-  if (GAME.captureInterval) clearInterval(GAME.captureInterval);
-  if (GAME.analyzeInterval) clearInterval(GAME.analyzeInterval);
-  if (GAME.stream) GAME.stream.getTracks().forEach(t=>t.stop());
+function stopLive(){
+  if(G.capI)clearInterval(G.capI);if(G.anaI)clearInterval(G.anaI);
+  if(G.stream)G.stream.getTracks().forEach(t=>t.stop());
   speechSynthesis.cancel();
-  GAME = { stream:null, captureInterval:null, analyzeInterval:null, frames:[], state:"idle", rallyLength:0, history:[], score:{a:"0",b:"0"}, lastEvent:"", processing:false };
-  document.getElementById("feed").innerHTML = "";
-  document.getElementById("live").style.display = "none";
-  document.getElementById("setup").style.display = "block";
+  G={stream:null,capI:null,anaI:null,frames:[],state:"idle",pointActive:false,pointCount:0,commentedPoints:0,history:[],processing:false,rallyFrames:0,skipNext:false};
+  document.getElementById("feed").innerHTML="";
+  document.getElementById("live").style.display="none";
+  document.getElementById("setup").style.display="block";
 }
 
-// INIT
-renderPlayers(); renderProvs(); chk();
+rP();rPv();rTTS();chk();
 </script>
 </body>
 </html>
