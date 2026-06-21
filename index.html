@@ -143,6 +143,409 @@ function rPv(){
   const b=document.getElementById("pvb");b.innerHTML="";
   PV.forEach(p=>{const bt=document.createElement("button");bt.className=`pb${S.pv===p.id?" on":""}`;bt.textContent=p.nm;bt.onclick=()=>{S.pv=p.id;S.url=p.url;S.md=p.md;if(p.id==="ollama")S.key="";rPv();chk()};b.appendChild(bt)});
   const pv=PV.find(p=>p.id===S.pv);
+  document.getElementById("apif").innerHTML=`${S.pv!=="ollama"?`<input type="text" placeholder="API Key Vision" value="${S.key}" oninput="S.key=this.value;savedKey=this.value;chk()">`:""}
+    <input type="text" placeholder="Endpoint" value="${S.url}" oninput="S.url=this.value;chk()">
+    <input type="text" placeholder="Modello" value="${S.md}" oninput="S.md=this.value;chk()">
+    <div class="ht">${pv.ht}</div>`;
+}
+
+function rTTS(){
+  const b=document.getElementById("ttsbtns");b.innerHTML="";
+  [{id:"browser",nm:"Browser (gratis)"},{id:"elevenlabs",nm:"ElevenLabs (naturale)"}].forEach(t=>{
+    const bt=document.createElement("button");bt.className=`pb${S.tts===t.id?" on":""}`;bt.textContent=t.nm;
+    bt.onclick=()=>{S.tts=t.id;rTTS();chk()};b.appendChild(bt);
+  });
+  const f=document.getElementById("ttsf");
+  if(S.tts==="elevenlabs"){
+    f.innerHTML=`<input type="text" placeholder="ElevenLabs API Key" value="${S.elKey}" oninput="S.elKey=this.value;chk()">
+      <input type="text" placeholder="Voice ID (es: pNInz6obpgDQGcFmaJgB)" value="${S.elVoice}" oninput="S.elVoice=this.value;chk()">
+      <div class="ht">elevenlabs.io → gratis 10k char/mese. Scegli una voce italiana maschile. Copia il Voice ID dalla libreria voci.</div>`;
+  } else {
+    f.innerHTML=`<div class="ht">Usa il sintetizzatore vocale del telefono. Funziona subito ma suona artificiale.</div>`;
+  }
+}
+
+function chk(){
+  const pok=S.pl.every(p=>p.nm&&p.sh);
+  const aok=S.url&&S.md&&(S.pv==="ollama"||S.key);
+  const tok=S.tts==="browser"||(S.elKey&&S.elVoice);
+  const ok=pok&&aok&&tok;
+  const btn=document.getElementById("go");
+  btn.className=ok?"go ok":"go no";btn.disabled=!ok;
+  const h=document.getElementById("ghint");
+  h.textContent=!pok?"Configura tutti i giocatori":!aok?"Configura Vision AI":!tok?"Configura la voce":"Pronto!";
+  h.style.color=ok?"#4ade80":"#444";
+}
+
+// ===== LIVE =====
+let savedKey="";
+async function startLive(){
+  // Save API key before switching screens (DOM inputs will be gone)
+  savedKey=S.key||"";
+  console.log("Starting live. Saved key:",savedKey?savedKey.substring(0,8)+"...":"EMPTY");
+  document.getElementById("setup").style.display="none";
+  document.getElementById("live").style.display="flex";
+  const lg=document.getElementById("lg");lg.innerHTML="";
+  S.pl.forEach(p=>{const c=CL.find(x=>x.n===p.sh);const d=document.createElement("div");d.className="li";d.innerHTML=`<div class="ld" style="background:${c?.h||"#888"}"></div>${p.nm}`;lg.appendChild(d)});
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}},audio:false});
+    G.stream=stream;
+    const vid=document.getElementById("vid");vid.srcObject=stream;
+    vid.onloadeddata=()=>{
+      setSt("on","In diretta");
+      G.capI=setInterval(capFrame,1500);
+      setTimeout(analyze,3000);
+      G.anaI=setInterval(analyze,5000);
+    };
+  }catch(e){addC("sys",ts(),"Errore telecamera: "+e.message)}
+}
+
+function capFrame(){
+  const vid=document.getElementById("vid");if(!vid||vid.readyState<2)return;
+  const c=document.getElementById("cnv");c.width=480;c.height=360;
+  c.getContext("2d").drawImage(vid,0,0,480,360);
+  G.frames.push(c.toDataURL("image/jpeg",0.6).split(",")[1]);
+  if(G.frames.length>5)G.frames.shift();
+}
+
+async function analyze(){
+  if(G.processing||G.frames.length<2)return;
+  G.processing=true;
+
+  const frm=G.frames.slice(-3);
+  const pDesc=S.pl.map((p,i)=>`${p.nm} (maglia ${p.sh}, coppia ${i<2?"A":"B"})`).join(", ");
+
+  try{
+    // ====== AGENTE 1: OSSERVATORE ======
+    const obsContent=frm.map(f=>({type:"image_url",image_url:{url:`data:image/jpeg;base64,${f}`}}));
+    obsContent.push({type:"text",text:`Sei un OSSERVATORE di padel. Guardi 3 frame consecutivi (1.5s tra uno e l'altro).
+GIOCATORI: ${pDesc}
+STATO PRECEDENTE: ${G.state}
+
+RISPONDI SOLO con JSON valido. Nessun altro testo.
+
+REGOLE PRECISE per determinare lo stato:
+- "battuta": un giocatore è FERMO in fondo al campo, gli altri sono posizionati, si sta per servire o sta servendo. Il giocatore ha il braccio alzato o la palla in mano.
+- "gioco": i giocatori si MUOVONO attivamente, ci sono cambi di posizione tra i frame, la palla è in gioco.
+- "punto_finito": i giocatori si stanno dando il CINQUE, si abbracciano, esultano, alzano il pugno, o camminano verso il centro.
+- "pausa": i giocatori camminano lentamente, bevono, parlano, cambiano campo, raccolgono palle.
+- "incerto": NON riesci a vedere chiaramente cosa succede. Luce scarsa, inquadratura confusa, troppo lontani.
+
+IMPORTANTISSIMO:
+- Se NON sei sicuro al 70%, metti "incerto". È MEGLIO dire "incerto" che inventare.
+- NON inventare azioni specifiche (tipo di colpo) se non le vedi CHIARAMENTE.
+- Guarda le DIFFERENZE tra i 3 frame per capire se c'è movimento.
+
+JSON:
+{
+  "stato": "battuta|gioco|punto_finito|pausa|incerto",
+  "confidenza": 1-10,
+  "cosa_vedo": "descrivi SOLO quello che vedi realmente, senza interpretare",
+  "giocatori_visibili": ["nomi che riconosci dal colore maglia"],
+  "movimento": "fermo|lento|veloce|non_chiaro"
+}`});
+
+    const obsR=await callAPI([{role:"user",content:obsContent}]);
+    let ev;
+    try{ev=JSON.parse(obsR.replace(/```json\s*/g,"").replace(/```/g,"").trim())}
+    catch(e){G.processing=false;return}
+
+    // Ignora se incerto o bassa confidenza
+    if(ev.stato==="incerto"||ev.confidenza<5){
+      updateBar("❓","Non chiaro — aspetto...");
+      G.processing=false;return;
+    }
+
+    const prev=G.state;
+    G.state=ev.stato;
+    updateBar(
+      {battuta:"🎾",gioco:"⚡",punto_finito:"🙌",pausa:"⏸"}[ev.stato]||"❓",
+      {battuta:"Servizio",gioco:"Gioco attivo",punto_finito:"Punto!",pausa:"Pausa"}[ev.stato]||ev.stato
+    );
+
+    // ====== LOGICA PUNTI ======
+    // Punto inizia con la battuta
+    if(ev.stato==="battuta"&&prev!=="battuta"){
+      G.pointActive=true;
+      G.rallyFrames=0;
+      G.pointCount++;
+    }
+
+    // Rally in corso
+    if(ev.stato==="gioco"&&G.pointActive){
+      G.rallyFrames++;
+    }
+
+    // Punto finisce con esultanza/cinque
+    if(ev.stato==="punto_finito"&&G.pointActive){
+      G.pointActive=false;
+
+      // ====== DECISIONE: COMMENTO QUESTO PUNTO? ======
+      // Commenta solo ~35% dei punti, favorendo quelli con rally lunghi
+      const isLongRally=G.rallyFrames>=4; // rally di almeno 6+ secondi
+      const shouldComment=isLongRally||Math.random()<0.35;
+
+      if(shouldComment&&!G.skipNext){
+        G.commentedPoints++;
+
+        // ====== AGENTE 2: TELECRONISTA ======
+        const lastComments=G.history.slice(-3).join("\n");
+        const prompt=`Sei un telecronista di padel ITALIANO. Non un robot, non un'intelligenza artificiale. Sei uno che AMA questo sport, che è lì a bordo campo col cuore in gola.
+
+COSA È APPENA SUCCESSO:
+- Stato: ${ev.stato}
+- Quello che si vede: ${ev.cosa_vedo}
+- Giocatori riconosciuti: ${(ev.giocatori_visibili||[]).join(", ")||"non chiari"}
+- Durata dello scambio: ${G.rallyFrames>=4?"lungo, intenso":G.rallyFrames>=2?"medio":"breve"}
+- Punto numero: ${G.pointCount}
+
+GIOCATORI: ${pDesc}
+
+${lastComments?`ULTIMI COMMENTI (non ripetere):\n${lastComments}`:""}
+
+COME DEVI PARLARE:
+- Come un amico appassionato che sta guardando la partita con te al bar
+- Frasi CORTE. "Madonna che punto!" "Eh no dai, quella era dentro!" "Senti che botta!"
+- Puoi usare espressioni colloquiali italiane: "Mamma mia", "Dai dai dai!", "Noo!", "Eccola!", "Ma che ha fatto?!"
+- ${isLongRally?"Lo scambio è stato LUNGO — fallo sentire, cresci col tono, esplodi alla fine!":""}
+- NON descrivere colpo per colpo come un manuale. Tu REAGISCI a quello che vedi.
+- Se non hai visto bene l'azione, commenta l'ENERGIA, la TENSIONE, il MOMENTO — non inventare colpi specifici.
+- MASSIMO 2 frasi. Anche una sola va benissimo.
+- MAI iniziare con "Ecco", "Allora", "In questa azione"
+- MAI menzionare che sei un AI o telecronista
+
+Solo il commento, nient'altro.`;
+
+        const comm=await callAPI([{role:"user",content:prompt}]);
+        if(comm&&comm.length>3){
+          const type=isLongRally?"hot":"pt";
+          addC(type,ts(),comm);
+          G.history.push(comm);if(G.history.length>6)G.history.shift();
+          await speak(comm);
+        }
+        // Dopo un commento, salta il prossimo per non saturare
+        G.skipNext=true;
+      } else {
+        G.skipNext=false;
+      }
+    }
+
+    // Commento sulla battuta (solo ogni tanto)
+    if(ev.stato==="battuta"&&prev!=="battuta"&&Math.random()<0.25){
+      const servP=(ev.giocatori_visibili||[])[0]||"il giocatore";
+      const servComm=await callAPI([{role:"user",content:`Sei un telecronista di padel italiano informale e appassionato. ${servP} sta per servire. Punto numero ${G.pointCount}.
+${G.history.length?`Ultimo commento: "${G.history[G.history.length-1]}" — NON ripetere concetti simili.`:""}
+Crea TENSIONE in UNA frase corta prima della battuta. Tipo: "Vediamo cosa tira fuori ${servP}..." o "Attenzione qui..." o "Ora si fa sul serio."
+NON menzionare che sei AI. Solo la frase.`}]);
+      if(servComm&&servComm.length>3){
+        addC("act",ts(),servComm);
+        G.history.push(servComm);if(G.history.length>6)G.history.shift();
+        await speak(servComm);
+      }
+    }
+
+    setSt("on","In diretta");
+  }catch(e){
+    console.error(e);
+    addC("sys",ts(),"⚠️ "+e.message);
+  }finally{G.processing=false}
+}
+
+// ===== API =====
+async function callAPI(msgs){
+  // Read key directly from DOM as backup
+  const keyInput=document.querySelector('#apif input[placeholder="API Key Vision"]');
+  const apiKey=S.key||(keyInput?keyInput.value:"")||savedKey;
+  const h={"Content-Type":"application/json"};
+  if(apiKey)h["Authorization"]=`Bearer ${apiKey}`;
+  if(S.pv==="openrouter"){h["HTTP-Referer"]=location.href;h["X-Title"]="PadelCast"}
+  console.log("API call to:",S.url,"key present:",!!apiKey,"key start:",apiKey?apiKey.substring(0,8)+"...":"EMPTY");
+  if(!apiKey&&S.pv!=="ollama"){throw new Error("API Key mancante! Torna indietro e reinseriscila.")}
+  const r=await fetch(S.url,{method:"POST",headers:h,body:JSON.stringify({model:S.md,max_tokens:250,messages:msgs})});
+  if(!r.ok)throw new Error(`API ${r.status}: ${(await r.text()).substring(0,120)}`);
+  const d=await r.json();return d.choices?.[0]?.message?.content||"";
+}
+
+// ===== TTS =====
+async function speak(text){
+  if(S.tts==="elevenlabs")return speakEL(text);
+  return speakBrowser(text);
+}
+
+function speakBrowser(text){
+  return new Promise(res=>{
+    document.getElementById("spk").style.display="flex";
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="it-IT";u.rate=1.15;u.pitch=1.1;
+    u.onend=u.onerror=()=>{document.getElementById("spk").style.display="none";res()};
+    speechSynthesis.speak(u);
+  });
+}
+
+async function speakEL(text){
+  document.getElementById("spk").style.display="flex";
+  try{
+    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${S.elVoice}`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","xi-api-key":S.elKey},
+      body:JSON.stringify({
+        text,
+        model_id:"eleven_multilingual_v2",
+        voice_settings:{stability:0.35,similarity_boost:0.8,style:0.65,use_speaker_boost:true}
+      })
+    });
+    if(!r.ok)throw new Error("ElevenLabs error "+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    await new Promise(res=>{
+      const a=new Audio(url);
+      a.onended=a.onerror=()=>{URL.revokeObjectURL(url);res()};
+      a.play().catch(()=>res());
+    });
+  }catch(e){
+    console.error("ElevenLabs fallback to browser:",e);
+    await speakBrowser(text);
+  }finally{
+    document.getElementById("spk").style.display="none";
+  }
+}
+
+// ===== UI =====
+function setSt(t,x){document.getElementById("sd").className=`sd ${t==="on"?"on":"w"}`;document.getElementById("stx").textContent=x}
+function updateBar(ic,tx){document.getElementById("sic").textContent=ic;document.getElementById("slb").innerHTML=`<b>${tx}</b>`}
+function ts(){return new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}
+
+function addC(type,time,text){
+  const f=document.getElementById("feed");
+  const prev=f.querySelector(".nw");if(prev)prev.classList.remove("nw");
+  const r=document.createElement("div");
+  r.className=`cr nw ${type}`;
+  r.innerHTML=`<div class="ct">${time}</div><div class="cx${type==="hot"?" h":""}">${text}</div>`;
+  f.appendChild(r);f.scrollTop=f.scrollHeight;
+}
+
+function stopLive(){
+  if(G.capI)clearInterval(G.capI);if(G.anaI)clearInterval(G.anaI);
+  if(G.stream)G.stream.getTracks().forEach(t=>t.stop());
+  speechSynthesis.cancel();
+  G={stream:null,capI:null,anaI:null,frames:[],state:"idle",pointActive:false,pointCount:0,commentedPoints:0,history:[],processing:false,rallyFrames:0,skipNext:false};
+  document.getElementById("feed").innerHTML="";
+  document.getElementById("live").style.display="none";
+  document.getElementById("setup").style.display="block";
+}
+
+rP();rPv();rTTS();chk();
+</script>
+</body>
+</html>  .lg{position:absolute;bottom:6px;left:6px;display:flex;gap:4px;flex-wrap:wrap}
+  .li{background:rgba(0,0,0,.8);border-radius:8px;padding:2px 8px;display:flex;align-items:center;gap:4px;font-size:10px;backdrop-filter:blur(4px)}
+  .ld{width:7px;height:7px;border-radius:50%}
+
+  .sbar{display:flex;align-items:center;gap:8px;padding:5px 12px;background:#111;border-bottom:1px solid #1a1a1a;flex-shrink:0}
+  .sbar .ic{font-size:13px}
+  .sbar .tx{font-size:11px;color:#777}
+  .sbar .tx b{color:#e0e0e0;font-weight:600}
+
+  .feed{flex:1;overflow-y:auto;padding:6px 12px}
+  .cr{padding:8px 10px;border-radius:8px;margin-bottom:3px}
+  .cr.nw{animation:fi .3s ease}
+  .cr.act{border-left:3px solid #4ade80;background:#0a1a0a}
+  .cr.pt{border-left:3px solid #eab308;background:#1a1800}
+  .cr.hot{border-left:3px solid #ef4444;background:#1a0505}
+  .cr.sys{border-left:3px solid #555;background:#111}
+  .ct{color:#4ade80;font-family:monospace;font-size:10px;font-weight:600}
+  .cx{font-size:13px;line-height:1.5;color:#bbb;margin-top:2px}
+  .cx.h{color:#fff;font-weight:500;font-size:14px}
+
+  .bb{padding:8px 12px 20px;flex-shrink:0}
+  .sbtn{width:100%;padding:12px;border-radius:10px;border:none;background:#ef4444;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+
+  @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div id="setup" class="setup">
+  <div style="font-size:32px;text-align:center;margin-bottom:4px">🏓</div>
+  <h1>Padel<span>Cast</span> AI <sup style="font-size:10px;color:#555">v3</sup></h1>
+  <p class="sub">Osserva → capisce → commenta solo quando serve</p>
+  <div id="pbox"></div>
+
+  <div class="cd" style="margin-top:16px">
+    <div class="lb" style="color:#06b6d4">Vision AI (Qwen VL)</div>
+    <div id="pvb" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <div id="apif"></div>
+  </div>
+
+  <div class="cd">
+    <div class="lb" style="color:#ec4899">Voce telecronista</div>
+    <div id="ttsbtns" style="display:flex;gap:6px;margin-bottom:10px"></div>
+    <div id="ttsf"></div>
+  </div>
+
+  <button class="go no" id="go" disabled onclick="startLive()">Avvia telecronaca</button>
+  <div id="ghint" style="text-align:center;font-size:12px;color:#444;margin-top:8px"></div>
+</div>
+
+<div id="live" class="live" style="display:none">
+  <div class="vb">
+    <video id="vid" autoplay playsinline muted></video>
+    <canvas id="cnv" style="display:none"></canvas>
+    <div class="top">
+      <div class="pill"><div class="sd w" id="sd"></div><span class="st" id="stx">Avvio...</span></div>
+      <div class="pill" id="spk" style="display:none"><span style="font-size:10px;color:#4ade80">🔊</span></div>
+    </div>
+    <div class="lg" id="lg"></div>
+  </div>
+  <div class="sbar">
+    <span class="ic" id="sic">⏸</span>
+    <span class="tx" id="slb">In attesa...</span>
+  </div>
+  <div class="feed" id="feed"></div>
+  <div class="bb"><button class="sbtn" onclick="stopLive()">⏹ Ferma</button></div>
+</div>
+
+<script>
+const CL=[{n:"Rosso",h:"#DC2626"},{n:"Blu",h:"#2563EB"},{n:"Bianco",h:"#FFFFFF"},{n:"Nero",h:"#1a1a1a"},{n:"Verde",h:"#16A34A"},{n:"Giallo",h:"#EAB308"},{n:"Arancione",h:"#EA580C"},{n:"Rosa",h:"#EC4899"},{n:"Viola",h:"#7C3AED"},{n:"Azzurro",h:"#06B6D4"},{n:"Grigio",h:"#6B7280"}];
+
+const PV=[
+  {id:"openrouter",nm:"OpenRouter",url:"https://openrouter.ai/api/v1/chat/completions",md:"qwen/qwen-2.5-vl-72b-instruct",ht:"openrouter.ai — funziona dal browser, CORS ok."},
+  {id:"dashscope",nm:"DashScope",url:"https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",md:"qwen-vl-max",ht:"API ufficiale Alibaba."},
+  {id:"ollama",nm:"Ollama",url:"http://localhost:11434/v1/chat/completions",md:"qwen2.5-vl:7b",ht:"Locale, gratis. ollama pull qwen2.5-vl:7b"},
+];
+
+let S={
+  pl:[{nm:"",sh:""},{nm:"",sh:""},{nm:"",sh:""},{nm:"",sh:""}],
+  pv:"openrouter",key:"",url:PV[0].url,md:PV[0].md,
+  tts:"browser", elKey:"", elVoice:"",
+};
+
+let G={
+  stream:null, capI:null, anaI:null,
+  frames:[], state:"idle",
+  pointActive:false, pointCount:0, commentedPoints:0,
+  history:[], processing:false, rallyFrames:0,
+  skipNext: false,
+};
+
+// ===== SETUP =====
+function rP(){
+  const b=document.getElementById("pbox");b.innerHTML="";
+  S.pl.forEach((p,i)=>{
+    const d=document.createElement("div");d.className="cd";
+    const tc=i<2?"ta":"tb", tn=i<2?`Coppia A — G${i+1}`:`Coppia B — G${i-1}`;
+    d.innerHTML=`<div class="lb ${tc}">${tn}</div><input type="text" placeholder="Nome" value="${p.nm}" oninput="S.pl[${i}].nm=this.value;chk()"><div class="lb">Maglia</div><div class="cols" id="c${i}"></div>`;
+    b.appendChild(d);
+    const cd=d.querySelector(`#c${i}`);
+    CL.forEach(c=>{const dt=document.createElement("div");dt.className=`dot${p.sh===c.n?" s":""}${c.n==="Bianco"?" w":""}`;dt.style.backgroundColor=c.h;dt.title=c.n;dt.onclick=()=>{S.pl[i].sh=c.n;rP();chk()};cd.appendChild(dt)});
+  });
+}
+
+function rPv(){
+  const b=document.getElementById("pvb");b.innerHTML="";
+  PV.forEach(p=>{const bt=document.createElement("button");bt.className=`pb${S.pv===p.id?" on":""}`;bt.textContent=p.nm;bt.onclick=()=>{S.pv=p.id;S.url=p.url;S.md=p.md;if(p.id==="ollama")S.key="";rPv();chk()};b.appendChild(bt)});
+  const pv=PV.find(p=>p.id===S.pv);
   document.getElementById("apif").innerHTML=`${S.pv!=="ollama"?`<input type="text" placeholder="API Key Vision" value="${S.key}" oninput="S.key=this.value;chk()">`:""}
     <input type="text" placeholder="Endpoint" value="${S.url}" oninput="S.url=this.value;chk()">
     <input type="text" placeholder="Modello" value="${S.md}" oninput="S.md=this.value;chk()">
