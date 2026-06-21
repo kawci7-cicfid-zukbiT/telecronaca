@@ -117,15 +117,17 @@ const CL=[{n:"Rosso",h:"#DC2626"},{n:"Blu",h:"#2563EB"},{n:"Bianco",h:"#FFFFFF"}
 
 // Modelli di TESTO veloci (no vision serve)
 const PV=[
-  {id:"openrouter",nm:"OpenRouter",url:"https://openrouter.ai/api/v1/chat/completions",md:"google/gemini-flash-1.5",ht:"openrouter.ai → API Key. Modello veloce e economico per il live. Puoi cambiarlo."},
-  {id:"groq",nm:"Groq (velocissimo)",url:"https://api.groq.com/openai/v1/chat/completions",md:"llama-3.3-70b-versatile",ht:"console.groq.com → API Key gratis. Risposte fulminee, perfetto per il live."},
+  {id:"qwen-intl",nm:"Qwen (Internazionale)",url:"https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",md:"qwen-plus",ht:"bailian.console.aliyun.com (Singapore) → API Key sk-... Modello testo veloce. Usa qwen-turbo per risparmiare."},
+  {id:"qwen-cn",nm:"Qwen (Cina)",url:"https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",md:"qwen-plus",ht:"dashscope.console.aliyun.com (Cina) → API Key sk-... Usa questo se il tuo account è cinese."},
+  {id:"openrouter",nm:"OpenRouter",url:"https://openrouter.ai/api/v1/chat/completions",md:"google/gemini-flash-1.5",ht:"openrouter.ai → API Key sk-or-v1-..."},
+  {id:"groq",nm:"Groq",url:"https://api.groq.com/openai/v1/chat/completions",md:"llama-3.3-70b-versatile",ht:"console.groq.com → API Key gsk_... gratis e velocissimo."},
   {id:"ollama",nm:"Ollama (locale)",url:"http://localhost:11434/v1/chat/completions",md:"llama3.1:8b",ht:"Locale, gratis. ollama pull llama3.1:8b"},
 ];
 
 let S={
   pl:[{nm:"",sh:""},{nm:"",sh:""},{nm:"",sh:""},{nm:"",sh:""}],
   sideA:"sinistra",
-  pv:"openrouter",key:"",url:PV[0].url,md:PV[0].md,
+  pv:"qwen-intl",key:"",url:PV[0].url,md:PV[0].md,
   tts:"browser", elKey:"", elVoice:"",
 };
 
@@ -420,8 +422,12 @@ async function llm(userMsg){
     })});
     if(!r.ok){
       const e=await r.text();
-      if(r.status===401){LIVE_KEY=prompt("API Key non valida, reinseriscila:")||"";}
-      addC("sys",ts(),"⚠️ "+r.status+" "+e.substring(0,80));
+      if(r.status===401){
+        addC("sys",ts(),"⚠️ 401 — key rifiutata. Controlla: provider giusto? endpoint giusto (intl vs cina)? key valida? Endpoint usato: "+S.url);
+        LIVE_KEY=prompt("API Key rifiutata. Reinseriscila (o premi annulla e cambia provider/endpoint):")||"";
+      } else {
+        addC("sys",ts(),"⚠️ "+r.status+" "+e.substring(0,100));
+      }
       return "";
     }
     const d=await r.json();
